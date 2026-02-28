@@ -1,4 +1,4 @@
-﻿# luxlike-agent
+﻿# Razon Agent
 
 Monorepo scaffold for a Roblox plugin plus a Vercel serverless API.
 
@@ -13,7 +13,7 @@ Endpoint file:
 
 - `vercel-api/api/agent.ts`
 
-### Local payload contract
+### Request contract
 
 `POST /api/agent` expects JSON:
 
@@ -21,19 +21,59 @@ Endpoint file:
 {
   "projectName": "string",
   "prompt": "string",
-  "files": []
+  "files": [
+    {
+      "path": "string",
+      "className": "string (optional)",
+      "source": "string"
+    }
+  ],
+  "capabilities": {}
 }
 ```
 
-Success response format:
+Validation limits:
+
+- `prompt` max `8000` characters
+- `files` max `30` entries
+- each `files[i].source` max `120000` characters
+
+### Response format
 
 ```json
 {
   "summary": "string",
   "plan": ["string"],
-  "changes": [],
-  "warnings": []
+  "changes": [
+    {
+      "path": "string",
+      "action": "replace_source",
+      "newSource": "string"
+    }
+  ],
+  "warnings": ["string"]
 }
+```
+
+## Environment variables (Vercel)
+
+`OPENAI_API_KEY` is required.
+
+`MODEL` is optional. If not set, the API defaults to `gpt-4.1-mini`.
+
+Set variables in Vercel Dashboard:
+
+1. Open your Vercel project.
+2. Go to `Settings` -> `Environment Variables`.
+3. Add `OPENAI_API_KEY` with your key value.
+4. Optionally add `MODEL`.
+5. Redeploy after saving.
+
+You can also use CLI:
+
+```bash
+vercel env add OPENAI_API_KEY production
+vercel env add MODEL production
 ```
 
 ## Deploy to Vercel
@@ -46,16 +86,25 @@ Success response format:
 
 After deploy, the function is available at `/api/agent` on your Vercel project domain.
 
-## Environment variables (for later)
+## Test with curl
 
-No env vars are required for the current test response.
+Replace `<YOUR_DOMAIN>` with your deployed domain (for example `https://your-project.vercel.app`).
 
-When AI integration is added, set env vars in:
-
-- Vercel Dashboard -> Project -> Settings -> Environment Variables
-- or CLI, for example: `vercel env add OPENAI_API_KEY production`
-
-Recommended future vars:
-
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
+```bash
+curl -X POST "<YOUR_DOMAIN>/api/agent" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectName": "Razon Agent",
+    "prompt": "Refactor this file to improve readability.",
+    "files": [
+      {
+        "path": "src/Main.lua",
+        "className": "Main",
+        "source": "local Main = {}\\nreturn Main"
+      }
+    ],
+    "capabilities": {
+      "allowRefactor": true
+    }
+  }'
+```
